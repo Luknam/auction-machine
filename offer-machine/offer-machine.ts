@@ -68,17 +68,22 @@ export const createOfferMachine = (services: Services) =>
               {
                 target: "Offerable",
                 cond: "isOfferable",
+                actions: "addOfferDetails",
               },
-              { target: "UnOfferable" },
+              { target: "UnOfferable", actions: "addOfferDetails" },
             ],
           },
         },
         Offerable: {
           on: {
-            "OFFER.ADD_OFFER_DETAIL": {
-              target: "UnOfferable",
-              actions: "addOfferDetails",
-            },
+            "OFFER.ADD_OFFER_DETAIL": [
+              {
+                target: "Offerable",
+                cond: "isOfferable",
+                actions: "addOfferDetails",
+              },
+              { target: "UnOfferable", actions: "addOfferDetails" },
+            ],
             "OFFER.MAKE_OFFERED": {
               target: "MakeOffer",
             },
@@ -134,10 +139,10 @@ export const createOfferMachine = (services: Services) =>
       },
       guards: {
         isOfferable: (context, event) => {
-          return (
-            context.offerQuantity <= context.maximumOfferQuantity &&
-            context.offerValue >= context.minimumOfferValue
-          );
+          const result =
+            event.offerQuantity <= context.maximumOfferQuantity &&
+            event.offerValue >= context.minimumOfferValue;
+          return result;
         },
       },
     }
