@@ -17,6 +17,9 @@ export const services = {
     // return json.data.children.map((child: any) => child.data);
     return "Ok";
   },
+  clearOfferValue: async (context: Context) => {
+    return {};
+  },
 };
 
 type Services = typeof services;
@@ -26,10 +29,6 @@ export const createOfferMachine = (services: Services) =>
       on: {
         "OFFER.LOWEST_BID_CHANGED": {
           actions: "updateMinimumOfferValue",
-        },
-        "OFFER.CLEAR_OFFER": {
-          actions: "clearOfferValue",
-          target: "UnOfferable",
         },
       },
       tsTypes: {} as import("./offer-machine.typegen").Typegen0,
@@ -52,6 +51,7 @@ export const createOfferMachine = (services: Services) =>
           | { type: "OFFER.CLEAR_OFFER" },
         services: {} as {
           makeOffer: { data: string };
+          clearOfferValue: { data: any };
         },
       },
       initial: "UnOfferable",
@@ -96,7 +96,16 @@ export const createOfferMachine = (services: Services) =>
             },
           },
         },
-        DisplayResult: {},
+        DisplayResult: {
+          invoke: {
+            id: "clear-offer-value",
+            src: "clearOfferValue",
+            onDone: {
+              target: "UnOfferable",
+              actions: "clearOfferValue",
+            },
+          },
+        },
       },
     },
     {

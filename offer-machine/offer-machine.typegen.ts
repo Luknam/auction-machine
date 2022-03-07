@@ -4,11 +4,15 @@ export interface Typegen0 {
   "@@xstate/typegen": true;
   eventsCausingActions: {
     updateMinimumOfferValue: "OFFER.LOWEST_BID_CHANGED";
-    clearOfferValue: "OFFER.CLEAR_OFFER";
     addOfferDetails: "OFFER.ADD_OFFER_DETAIL";
+    clearOfferValue: "done.invoke.clear-offer-value";
   };
   internalEvents: {
-    "xstate.init": { type: "xstate.init" };
+    "done.invoke.clear-offer-value": {
+      type: "done.invoke.clear-offer-value";
+      data: unknown;
+      __tip: "See the XState TS docs to learn how to strongly type this.";
+    };
     "done.invoke.make-offer": {
       type: "done.invoke.make-offer";
       data: unknown;
@@ -18,9 +22,15 @@ export interface Typegen0 {
       type: "error.platform.make-offer";
       data: unknown;
     };
+    "xstate.init": { type: "xstate.init" };
+    "error.platform.clear-offer-value": {
+      type: "error.platform.clear-offer-value";
+      data: unknown;
+    };
   };
   invokeSrcNameMap: {
     makeOffer: "done.invoke.make-offer";
+    clearOfferValue: "done.invoke.clear-offer-value";
   };
   missingImplementations: {
     actions: never;
@@ -30,6 +40,7 @@ export interface Typegen0 {
   };
   eventsCausingServices: {
     makeOffer: "OFFER.MAKE_OFFERED";
+    clearOfferValue: "done.invoke.make-offer" | "error.platform.make-offer";
   };
   eventsCausingGuards: {
     isOfferable: "OFFER.ADD_OFFER_DETAIL";
