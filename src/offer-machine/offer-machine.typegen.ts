@@ -22,6 +22,7 @@ export interface Typegen0 {
       type: "error.platform.make-offer";
       data: unknown;
     };
+    "": { type: "" };
     "xstate.init": { type: "xstate.init" };
     "error.platform.clear-offer-value": {
       type: "error.platform.clear-offer-value";
@@ -43,9 +44,15 @@ export interface Typegen0 {
     clearOfferValue: "done.invoke.make-offer" | "error.platform.make-offer";
   };
   eventsCausingGuards: {
+    recheckIsOfferable: "";
     isOfferable: "OFFER.ADD_OFFER_DETAIL";
   };
   eventsCausingDelays: {};
-  matchesStates: "UnOfferable" | "Offerable" | "MakeOffer" | "DisplayResult";
+  matchesStates:
+    | "recheck"
+    | "UnOfferable"
+    | "Offerable"
+    | "MakeOffer"
+    | "DisplayResult";
   tags: never;
 }

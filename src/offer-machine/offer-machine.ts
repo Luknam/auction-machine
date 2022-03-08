@@ -8,14 +8,17 @@ export type Context = {
 };
 
 export const services = {
-  makeOffer: async (context: Context) => {
+  makeOffer: async (context: Context): Promise<string> => {
     const { offerQuantity, offerValue } = context;
 
     //TODO: Call api make offer
-    // const response = await fetch(`https://www.reddit.com/r/${subreddit}.json`);
-    // const json = await response.json();
-    // return json.data.children.map((child: any) => child.data);
-    return "Ok";
+
+    const test = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve("Hello world");
+      }, 5000);
+    });
+    return test as Promise<string>;
   },
   clearOfferValue: async (context: Context) => {
     return {};
@@ -28,6 +31,7 @@ export const createOfferMachine = (services: Services) =>
     {
       on: {
         "OFFER.LOWEST_BID_CHANGED": {
+          target: "recheck",
           actions: "updateMinimumOfferValue",
         },
       },
@@ -62,6 +66,17 @@ export const createOfferMachine = (services: Services) =>
         offerValue: 0,
       },
       states: {
+        recheck: {
+          on: {
+            "": [
+              {
+                target: "Offerable",
+                cond: "recheckIsOfferable",
+              },
+              { target: "UnOfferable" },
+            ],
+          },
+        },
         UnOfferable: {
           on: {
             "OFFER.ADD_OFFER_DETAIL": [
@@ -142,6 +157,12 @@ export const createOfferMachine = (services: Services) =>
           const result =
             event.offerQuantity <= context.maximumOfferQuantity &&
             event.offerValue >= context.minimumOfferValue;
+          return result;
+        },
+        recheckIsOfferable: (context, event) => {
+          const result =
+            context.offerQuantity <= context.maximumOfferQuantity &&
+            context.offerValue >= context.minimumOfferValue;
           return result;
         },
       },
