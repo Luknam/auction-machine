@@ -2,19 +2,47 @@ import { assign, createMachine } from "xstate";
 
 export type Context = {};
 
+export type BidDetails = {
+  currentBid: number;
+  bidPosition: number;
+  totalBidPosition: number;
+  status: boolean;
+};
+
 export type Services = typeof services;
 export const services = {
-  getBidDetail: async (context: Context) => {
+  getBidDetail: async (context: Context): Promise<BidDetails> => {
     // TODO: Call contract to increase bid
-    return "Ok";
+    const test = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          currentBid: 1,
+          bidPosition: 10,
+          totalBidPosition: 5,
+          status: true,
+        });
+      }, 0);
+    });
+    return test as Promise<BidDetails>;
   },
   increaseBid: async (context: Context) => {
     // TODO: Call contract to increase bid
-    return "Ok";
+    const test = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve("Hello world");
+      }, 5000);
+    });
+    return test as Promise<string>;
   },
   refundBid: async (context: Context) => {
     // TODO: Call refund bid
-    return "Ok";
+
+    const test = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve("Hello world");
+      }, 5000);
+    });
+    return test as Promise<string>;
   },
 };
 
@@ -32,15 +60,18 @@ export const createBidMachine = (services: Services) =>
           currency: string;
           currentBidPosition: number;
           totalBidPosition: number;
-          isInMoney: boolean;
           minBid: number;
-          error: string;
         },
         events: {} as
+          | {
+              type: "BID.GET_DETAILS";
+              currentBid: number;
+              bidPosition: number;
+              isInMoney: boolean;
+            }
           | { type: "BID.UPDATE_DETAILS" }
           | { type: "BID.UPDATE_INCREASE_BID_VALUE"; newBidValue: number }
           | { type: "BID.INCREASE_BID" }
-          | { type: "BID.CLEAR_INCREASE_VALUE" }
           | { type: "BID.BID_POSITON_CHANGE"; position: number }
           | { type: "BID.REFUND" },
       },
@@ -48,8 +79,17 @@ export const createBidMachine = (services: Services) =>
       on: {
         "BID.BID_POSITON_CHANGE": {
           actions: "updateCurrentBidPostion",
-          target: "DisplayBid",
+          target: "ValidateBidState",
         },
+      },
+      context: {
+        bidId: "",
+        currentBidValue: 0.0,
+        increaseBidValue: 0,
+        currency: "Eth",
+        currentBidPosition: 9,
+        totalBidPosition: 100,
+        minBid: 0.1,
       },
       states: {
         Loading: {
@@ -57,20 +97,19 @@ export const createBidMachine = (services: Services) =>
             id: "get-bid-detail",
             src: "getBidDetail",
             onDone: {
-              target: "DisplayBid",
+              target: "ValidateBidState",
+              actions: "updateBidDetails",
             },
           },
         },
-        DisplayBid: {
-          on: {
-            "BID.UPDATE_DETAILS": [
-              {
-                target: "InMoney",
-                cond: "isInMoney",
-              },
-              { target: "OutOfMoney" },
-            ],
-          },
+        ValidateBidState: {
+          always: [
+            {
+              target: "InMoney",
+              cond: "isInMoney",
+            },
+            { target: "OutOfMoney" },
+          ],
         },
         InMoney: {
           on: {
@@ -123,6 +162,15 @@ export const createBidMachine = (services: Services) =>
     {
       services,
       actions: {
+        updateBidDetails: assign((context, event) => {
+          const data = event.data as BidDetails;
+          return {
+            ...context,
+            currentBidValue: 0.1,
+            currentBidPosition: data.bidPosition,
+            totalBidPosition: data.totalBidPosition,
+          };
+        }),
         updateIncreaseBidValue: assign((context, event) => {
           return {
             ...context,
@@ -138,7 +186,7 @@ export const createBidMachine = (services: Services) =>
       },
       guards: {
         isInMoney: (context, event) => {
-          return context.isInMoney;
+          return context.currentBidPosition < context.totalBidPosition;
         },
       },
     }

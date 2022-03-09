@@ -4,9 +4,15 @@ export interface Typegen0 {
   "@@xstate/typegen": true;
   eventsCausingActions: {
     updateCurrentBidPostion: "BID.BID_POSITON_CHANGE";
+    updateBidDetails: "done.invoke.get-bid-detail";
     updateIncreaseBidValue: "BID.UPDATE_INCREASE_BID_VALUE";
   };
   internalEvents: {
+    "done.invoke.get-bid-detail": {
+      type: "done.invoke.get-bid-detail";
+      data: unknown;
+      __tip: "See the XState TS docs to learn how to strongly type this.";
+    };
     "done.invoke.increase-bid": {
       type: "done.invoke.increase-bid";
       data: unknown;
@@ -21,12 +27,8 @@ export interface Typegen0 {
       data: unknown;
       __tip: "See the XState TS docs to learn how to strongly type this.";
     };
+    "": { type: "" };
     "xstate.init": { type: "xstate.init" };
-    "done.invoke.get-bid-detail": {
-      type: "done.invoke.get-bid-detail";
-      data: unknown;
-      __tip: "See the XState TS docs to learn how to strongly type this.";
-    };
     "error.platform.get-bid-detail": {
       type: "error.platform.get-bid-detail";
       data: unknown;
@@ -56,12 +58,12 @@ export interface Typegen0 {
     refundBid: "BID.REFUND";
   };
   eventsCausingGuards: {
-    isInMoney: "BID.UPDATE_DETAILS";
+    isInMoney: "";
   };
   eventsCausingDelays: {};
   matchesStates:
     | "Loading"
-    | "DisplayBid"
+    | "ValidateBidState"
     | "InMoney"
     | "OutOfMoney"
     | "IncreaseBid"
