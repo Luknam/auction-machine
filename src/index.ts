@@ -1,12 +1,12 @@
 import { inspect } from "@xstate/inspect";
 import { interpret } from "xstate";
+import {
+  createBidMachine,
+  services as bidServices,
+} from "./bid-machine/bid-machine";
 // import { registerActor, sendEvent } from "./actor-registry";
 // @ts-ignore
 import { Elm } from "./Main.elm";
-import { createOfferMachine, services } from "./offer-machine/offer-machine";
-
-// import { createRedditMachine } from "./reddit-machine";
-// import { createSubredditMachine } from "./subreddit-matchine";
 
 inspect({
   // options
@@ -19,7 +19,12 @@ const elmApp = Elm.Main.init({
   flags: {},
 });
 
-const machine = interpret(createOfferMachine(services), { devTools: true });
+// Use with Main in bid-machine
+const machine = interpret(createBidMachine(bidServices), { devTools: true });
+
+// Use with Main in offer-machine
+// const machine = interpret(createOfferMachine(services), { devTools: true });
+
 machine.onTransition((state) => {
   elmApp.ports.stateChanged.send(state);
 });

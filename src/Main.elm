@@ -22,29 +22,35 @@ main =
 
 type alias Model =
     { state : State
-    , minimumOfferValue : Float
-    , maximumOfferQuantity : Int
-    , offerValue : Float
-    , offerQuantity : Int
+    , bidId : String
+    , currentBidValue : Float
+    , increaseBidValue : Float
+    , currency : String
+    , currentBidPosition : Int
+    , totalBidPosition : Int
+    , minBid : Float
     }
 
 
 type State
-    = Idle
-    | UnOfferable
-    | Offerable
-    | MakeOffer
-    | DisplayResult
+    = Loading
+    | InMoney
+    | OutOfMoney
+    | IncreaseBid
+    | Refunded
 
 
 modelDecoder : D.Decoder Model
 modelDecoder =
-    D.map5 Model
+    D.map8 Model
         stateDecoder
-        (D.at [ "context", "minimumOfferValue" ] D.float)
-        (D.at [ "context", "maximumOfferQuantity" ] D.int)
-        (D.at [ "context", "offerValue" ] D.float)
-        (D.at [ "context", "offerQuantity" ] D.int)
+        (D.at [ "context", "bidId" ] D.string)
+        (D.at [ "context", "currentBidValue" ] D.float)
+        (D.at [ "context", "increaseBidValue" ] D.float)
+        (D.at [ "context", "currency" ] D.string)
+        (D.at [ "context", "currentBidPosition" ] D.int)
+        (D.at [ "context", "totalBidPosition" ] D.int)
+        (D.at [ "context", "minBid" ] D.float)
 
 
 stateDecoder : D.Decoder State
@@ -53,20 +59,20 @@ stateDecoder =
         |> D.andThen
             (\value ->
                 case value of
-                    "Idle" ->
-                        D.succeed Idle
+                    "Loading" ->
+                        D.succeed Loading
 
-                    "UnOfferable" ->
-                        D.succeed UnOfferable
+                    "InMoney" ->
+                        D.succeed InMoney
 
-                    "Offerable" ->
-                        D.succeed Offerable
+                    "OutOfMoney" ->
+                        D.succeed OutOfMoney
 
-                    "MakeOffer" ->
-                        D.succeed MakeOffer
+                    "IncreaseBid" ->
+                        D.succeed IncreaseBid
 
-                    "DisplayResult" ->
-                        D.succeed DisplayResult
+                    "Refunded" ->
+                        D.succeed Refunded
 
                     v ->
                         D.fail ("Unknown state: " ++ v)
@@ -74,22 +80,25 @@ stateDecoder =
 
 
 type Msg
-    = Ignore
-    | StateChanged Model
+    = StateChanged Model
     | DecodeStateError D.Error
-    | OfferClicked
-    | QuantityChanged String
+    | IncreaseClicked
     | ValueChanged String
+    | RefundClicked
+    | BidPositionChanged Int
     | UpdateConditionClicked
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { state = Idle
-      , minimumOfferValue = 0.0
-      , maximumOfferQuantity = 0
-      , offerValue = 0.0
-      , offerQuantity = 0
+    ( { state = Loading
+      , bidId = ""
+      , currentBidValue = 0.0
+      , increaseBidValue = 0.0
+      , currency = ""
+      , currentBidPosition = 0
+      , totalBidPosition = 0
+      , minBid = 0.0
       }
     , Cmd.none
     )
@@ -101,13 +110,37 @@ update msg model =
         StateChanged m ->
             ( m, Cmd.none )
 
-        QuantityChanged t ->
-            ( { model | offerQuantity = Maybe.withDefault 0 (String.toInt t) }
+        BidPositionChanged position ->
+            ( { model | currentBidPosition = position }, Cmd.none )
+
+        IncreaseClicked ->
+            ( model
             , MachineConnector.event
                 (E.object
-                    [ ( "type", E.string "OFFER.ADD_OFFER_DETAIL" )
-                    , ( "offerQuantity", E.int (Maybe.withDefault 0 (String.toInt t)) )
-                    , ( "offerValue", E.float model.offerValue )
+                    [ ( "type", E.string "BID.INCREASE_BID" )
+                    ]
+                )
+            )
+
+        RefundClicked ->
+            ( model
+            , MachineConnector.event
+                (E.object
+                    [ ( "type", E.string "BID.REFUND" )
+                    ]
+                )
+            )
+
+        ValueChanged t ->
+            let
+                increaseBidValue =
+                    Maybe.withDefault 0 (String.toFloat t)
+            in
+            ( { model | increaseBidValue = increaseBidValue }
+            , MachineConnector.event
+                (E.object
+                    [ ( "type", E.string "BID.UPDATE_INCREASE_BID_VALUE" )
+                    , ( "newBidValue", E.float increaseBidValue )
                     ]
                 )
             )
@@ -116,28 +149,8 @@ update msg model =
             ( model
             , MachineConnector.event
                 (E.object
-                    [ ( "type", E.string "OFFER.LOWEST_BID_CHANGED" )
-                    , ( "minimumOfferValue", E.float 10.0 )
-                    ]
-                )
-            )
-
-        ValueChanged t ->
-            ( { model | offerValue = Maybe.withDefault 0 (String.toFloat t) }
-            , MachineConnector.event
-                (E.object
-                    [ ( "type", E.string "OFFER.ADD_OFFER_DETAIL" )
-                    , ( "offerQuantity", E.int model.offerQuantity )
-                    , ( "offerValue", E.float (Maybe.withDefault 0 (String.toFloat t)) )
-                    ]
-                )
-            )
-
-        OfferClicked ->
-            ( model
-            , MachineConnector.event
-                (E.object
-                    [ ( "type", E.string "OFFER.MAKE_OFFERED" )
+                    [ ( "type", E.string "BID.BID_POSITON_CHANGE" )
+                    , ( "position", E.int 1 )
                     ]
                 )
             )
@@ -150,67 +163,87 @@ view : Model -> Html Msg
 view model =
     div []
         [ case model.state of
-            Idle ->
-                div [] [ text "Im idle?" ]
+            Loading ->
+                div [] [ text "State: Loading" ]
 
-            Offerable ->
-                div [] [ text "Im offerable" ]
+            IncreaseBid ->
+                div [] [ text "State: IncreaseBid" ]
 
-            UnOfferable ->
-                div [] [ text "Im unofferable" ]
+            Refunded ->
+                div [] [ text "State: Refunded" ]
 
-            MakeOffer ->
-                div [] [ text "Im make offer" ]
+            InMoney ->
+                div [] [ text "State: InMoney" ]
 
-            _ ->
-                div [] [ text "Dont know" ]
-        , viewAuctionDetail model
-        , viewOfferForm model
+            OutOfMoney ->
+                div [] [ text "State: OutOfMoney" ]
+        , viewBidDetail model
+        , viewBidOption model
         , viewSpecialButton
         ]
 
 
-viewAuctionDetail : Model -> Html Msg
-viewAuctionDetail model =
+viewBidDetail : Model -> Html Msg
+viewBidDetail model =
     div []
-        [ p [] [ span [] [ text "Maximum offer quantity" ], span [] [ text (toString model.maximumOfferQuantity) ] ]
-        , p [] [ span [] [ text "Minimum offer value" ], span [] [ text (toString model.minimumOfferValue) ] ]
+        [ div []
+            [ p []
+                [ span [] [ text "You current bid: " ]
+                , span [] [ text (toString model.currentBidValue) ]
+                , span [] [ text model.currency ]
+                , case model.state of
+                    InMoney ->
+                        div [ Attr.style "color" "green" ] [ text "You are In the money !" ]
+
+                    OutOfMoney ->
+                        div [ Attr.style "color" "red" ] [ text "You are Out of the money!" ]
+
+                    _ ->
+                        div [] []
+                ]
+            ]
+        , div []
+            [ p []
+                [ span [] [ text "Yout bid position: " ]
+                , span [] [ text (toString model.currentBidPosition) ]
+                , span [] [ text "/" ]
+                , span [] [ text (toString model.totalBidPosition) ]
+                ]
+            ]
         ]
 
 
-viewOfferForm : Model -> Html Msg
-viewOfferForm model =
+viewBidOption : Model -> Html Msg
+viewBidOption model =
+    let
+        isBidable =
+            model.increaseBidValue >= model.minBid
+    in
     div []
-        [ p [] [ text "offer quantity" ]
+        [ span [] [ text "min bid: " ]
+        , span [] [ text (toString model.minBid) ]
+        , p [ Attr.style "margin-right" "1rem" ] [ text "Increase this bid by" ]
         , input
             [ Attr.type_ "text"
-            , onInput QuantityChanged
-            , Attr.value (toString model.offerQuantity)
-            , Attr.disabled (List.member model.state [ MakeOffer ])
+            , Attr.style "margin-right" "1rem"
+            , onInput ValueChanged
+            , Attr.value (toString model.increaseBidValue)
+            , Attr.disabled (List.member model.state [ Refunded, IncreaseBid ])
             ]
             []
-        , div []
-            [ p [] [ text "offer value" ]
-            , input
-                [ Attr.type_ "text"
-                , onInput ValueChanged
-                , Attr.value (toString model.offerValue)
-                , Attr.disabled (List.member model.state [ MakeOffer ])
+        , div [ Attr.style "margin-top" "1rem" ]
+            [ button
+                [ Attr.style "margin-right" "1rem"
+                , Attr.disabled (List.member model.state [ Refunded, IncreaseBid ] || not isBidable)
+                , onClick IncreaseClicked
                 ]
-                []
-            ]
-        , button
-            [ Attr.disabled (List.member model.state [ UnOfferable, MakeOffer ])
-            , onClick OfferClicked
-            ]
-            [ text
-                (case model.state of
-                    MakeOffer ->
-                        "...Make Offer..."
-
-                    _ ->
-                        "Make Offer"
-                )
+                [ text "Increase this bid" ]
+            , button
+                [ Attr.hidden (not (List.member model.state [ OutOfMoney ]))
+                , Attr.disabled (List.member model.state [ Refunded, IncreaseBid ])
+                , onClick RefundClicked
+                ]
+                [ text "Refund" ]
             ]
         ]
 
@@ -218,9 +251,12 @@ viewOfferForm model =
 viewSpecialButton : Html Msg
 viewSpecialButton =
     button
-        [ onClick UpdateConditionClicked
+        [ Attr.style "margin-top" "1rem"
+        , Attr.style "background-color" "teal"
+        , Attr.style "color" "white"
+        , onClick UpdateConditionClicked
         ]
-        [ text "Update condition"
+        [ text "Update bid position "
         ]
 
 
