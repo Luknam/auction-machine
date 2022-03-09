@@ -49,7 +49,7 @@ export interface Typegen0 {
   };
   eventsCausingDelays: {};
   matchesStates:
-    | "recheck"
+    | "Recheck"
     | "UnOfferable"
     | "Offerable"
     | "MakeOffer"

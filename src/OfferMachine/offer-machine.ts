@@ -31,7 +31,7 @@ export const createOfferMachine = (services: Services) =>
     {
       on: {
         "OFFER.LOWEST_BID_CHANGED": {
-          target: "recheck",
+          target: "Recheck",
           actions: "updateMinimumOfferValue",
         },
       },
@@ -66,16 +66,14 @@ export const createOfferMachine = (services: Services) =>
         offerValue: 0,
       },
       states: {
-        recheck: {
-          on: {
-            "": [
-              {
-                target: "Offerable",
-                cond: "recheckIsOfferable",
-              },
-              { target: "UnOfferable" },
-            ],
-          },
+        Recheck: {
+          always: [
+            {
+              target: "Offerable",
+              cond: "recheckIsOfferable",
+            },
+            { target: "UnOfferable" },
+          ],
         },
         UnOfferable: {
           on: {
